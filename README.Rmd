@@ -1,0 +1,70 @@
+---
+title: "Automatic scoring of the Autism-Spectrum Quotient (AQ)"
+author: "Dale Barr"
+output: html_document
+---
+
+## The data
+
+```{r url, echo = FALSE, message = FALSE, results = 'asis'}
+library("tidyverse")
+url <- "http://talklab.psy.gla.ac.uk/sm_data.csv"
+
+cat("The anonymized data are available at <", url, ">\n", sep = "")
+```
+
+## Respondent information
+
+```{r preprocess, echo = FALSE}
+
+## load and pre-process data
+dat <- read_csv(url, skip = 1L, 
+                col_types = cols(Participate = col_logical()))
+
+## participant info
+pinfo <- dat %>%
+  select(Id, Gender, Age, Participate)
+```
+
+Complete responses were received from `r nrow(pinfo)` participants. The `r pinfo %>% pull(Participate) %>% sum()` who agreed to participate had the following demographics:
+
+```{r demographics, echo = FALSE}
+pinfo %>%
+  filter(Participate) %>%
+  group_by(Gender) %>%
+  summarize(N = n(), `Mean Age` = mean(Age), 
+            SD = sd(Age)) %>%
+  knitr::kable(digits = 1)
+```
+
+
+## AQ distribution
+
+```{r aq_dist, echo = FALSE}
+# score the individual responses
+resp <- dat %>%
+  select(Id, Q1:Q10) %>%
+  gather("question", "score", Q1:Q10) %>% # wide to long
+  separate(score, c("qualifier", "agreement"), "\\s") %>%
+  ## score questions 1, 7, 8, 10 forward, otherwise backward
+  mutate(fwd_format = question %in% c("Q1", "Q7", "Q8", "Q10"),
+         score = case_when(fwd_format ~ agreement == "Agree",
+                           TRUE ~ agreement == "Disagree"))
+# calculate scores for each respondent
+scores <- resp %>%
+  group_by(Id) %>%
+  summarize(totscore = as.integer(sum(score))) %>%
+  ungroup() %>%
+  filter(!is.na(totscore)) %>% # no NAs
+  semi_join(pinfo %>% filter(Participate), "Id")
+
+ggplot(scores, aes(totscore)) + 
+  geom_bar(stat = "count") +
+  scale_x_discrete(limits = 0:10) +
+  coord_cartesian(xlim = c(0, 10)) +
+  labs(x = "AQ score")
+```
+
+## Reference
+
+Baron-Cohen, S., Wheelwright, S., Skinner, R., Martin, J., & Clubley, E. (2001). The autism-spectrum quotient (AQ): Evidence from asperger syndrome/high-functioning autism, malesand females, scientists and mathematicians. *Journal of autism and developmental disorders*, *31*, 5-17.
