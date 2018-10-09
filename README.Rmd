@@ -1,14 +1,13 @@
 ---
 title: "Automatic scoring of the Autism-Spectrum Quotient (AQ)"
 author: "Dale Barr"
-output: html_document
 ---
 
 ## The data
 
 ```{r url, echo = FALSE, message = FALSE, results = 'asis'}
 library("tidyverse")
-url <- "http://talklab.psy.gla.ac.uk/sm_data.csv"
+url <- "https://github.com/dalejbarr/aq_wrangle/raw/master/sm_data.csv"
 
 cat("The anonymized data are available at <", url, ">\n", sep = "")
 ```
